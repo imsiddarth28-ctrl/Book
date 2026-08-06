@@ -10,8 +10,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File is required' }, { status: 400 });
     }
 
-    const blob = await put(file.name, file, {
+    const cleanFileName = (file.name || 'page.jpg').replace(/[^a-zA-Z0-9.-]/g, '_');
+    const uniqueFileName = `notes/${Date.now()}-${Math.random().toString(36).substring(2, 8)}-${cleanFileName}`;
+
+    const blob = await put(uniqueFileName, file, {
       access: 'public',
+      addRandomSuffix: true,
     });
 
     return NextResponse.json({ url: blob.url }, { status: 201 });
