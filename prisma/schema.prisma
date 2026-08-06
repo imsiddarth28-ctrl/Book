@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Book {
+  id         String   @id @default(cuid())
+  title      String
+  coverColor String   @default("#6B6358")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  pages      Page[]
+
+  @@map("books")
+}
+
+model Page {
+  id         String   @id @default(cuid())
+  bookId     String
+  imageUrl   String
+  pageNumber Int
+  createdAt  DateTime @default(now())
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, pageNumber])
+  @@index([bookId])
+  @@map("pages")
+}
