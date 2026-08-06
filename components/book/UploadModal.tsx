@@ -2,9 +2,10 @@
 
 import { useState, useRef } from 'react';
 import { AnimatePresence, motion, Reorder } from 'framer-motion';
-import { Upload, Camera, X, Loader2, Plus } from 'lucide-react';
+import { Upload, Camera, X, Loader2, Plus, Crop as CropIcon } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import ImageCropperModal from './ImageCropperModal';
 
 interface UploadModalProps {
   bookId: string;
@@ -24,8 +25,24 @@ export default function UploadModal({ bookId, currentPageCount, isOpen, onClose,
   const [files, setFiles] = useState<PreviewFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [croppingFileId, setCroppingFileId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCropComplete = (fileId: string, croppedBlob: Blob, croppedDataUrl: string) => {
+    setFiles(prev => prev.map(item => {
+      if (item.id === fileId) {
+        URL.revokeObjectURL(item.previewUrl);
+        const croppedFile = new File([croppedBlob], item.file.name, { type: 'image/jpeg' });
+        return {
+          ...item,
+          file: croppedFile,
+          previewUrl: croppedDataUrl
+        };
+      }
+      return item;
+    }));
+  };
 
   const handleFiles = (newFiles: FileList | File[]) => {
     const validFiles = Array.from(newFiles).filter(f => f.type.startsWith('image/'));
@@ -163,12 +180,30 @@ export default function UploadModal({ bookId, currentPageCount, isOpen, onClose,
                         <div className="absolute top-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded backdrop-blur-sm">
                           {currentPageCount + i + 1}
                         </div>
-                        <button
-                          onClick={() => removeFile(f.id)}
-                          className="absolute top-1 right-1 bg-white/90 text-red-500 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
+                        <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCroppingFileId(f.id);
+                            }}
+                            className="bg-white/90 text-gray-800 p-1 rounded-full hover:bg-white transition-colors"
+                            title="Crop photo"
+                          >
+                            <CropIcon className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeFile(f.id);
+                            }}
+                            className="bg-white/90 text-red-500 p-1 rounded-full hover:bg-white transition-colors"
+                            title="Remove photo"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
                       </div>
                     </Reorder.Item>
                   ))}
@@ -224,6 +259,15 @@ export default function UploadModal({ bookId, currentPageCount, isOpen, onClose,
           </div>
         </motion.div>
       </div>
+
+      {croppingFileId && (
+        <ImageCropperModal
+          isOpen={!!croppingFileId}
+          imageSrc={files.find(f => f.id === croppingFileId)?.previewUrl || ''}
+          onClose={() => setCroppingFileId(null)}
+          onCropComplete={(blob, dataUrl) => handleCropComplete(croppingFileId, blob, dataUrl)}
+        />
+      )}
     </AnimatePresence>
   );
 }
