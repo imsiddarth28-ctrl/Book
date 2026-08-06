@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { AnimatePresence, motion, Reorder } from 'framer-motion';
 import { Upload, Camera, X, Loader2, Plus, Crop as CropIcon } from 'lucide-react';
 import Image from 'next/image';
-import { cn } from '@/lib/utils';
+import { cn, compressImage } from '@/lib/utils';
 import ImageCropperModal from './ImageCropperModal';
 
 interface UploadModalProps {
@@ -74,10 +74,11 @@ export default function UploadModal({ bookId, currentPageCount, isOpen, onClose,
     setIsUploading(true);
 
     try {
-      const uploadedUrls: string[] = [];
-      for (const f of files) {
+      // Parallel compress and upload for maximum speed
+      const uploadPromises = files.map(async (f) => {
+        const optimizedFile = await compressImage(f.file);
         const formData = new FormData();
-        formData.append('file', f.file);
+        formData.append('file', optimizedFile);
         
         const res = await fetch('/api/upload', {
           method: 'POST',
@@ -86,8 +87,10 @@ export default function UploadModal({ bookId, currentPageCount, isOpen, onClose,
         
         if (!res.ok) throw new Error('Upload failed');
         const { url } = await res.json();
-        uploadedUrls.push(url);
-      }
+        return url as string;
+      });
+
+      const uploadedUrls = await Promise.all(uploadPromises);
 
       const pages = uploadedUrls.map((url, i) => ({
         imageUrl: url,

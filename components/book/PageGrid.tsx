@@ -46,13 +46,18 @@ export default function PageGrid({ bookId, pages, onUpdate }: PageGridProps) {
 
   const handleDelete = async () => {
     if (!deletePageId) return;
+    const targetId = deletePageId;
+    setDeletePageId(null);
+    
+    // Optimistic UI update: remove page from state instantly
+    setItems(prev => prev.filter(p => p.id !== targetId));
+
     try {
-      await fetch(`/api/pages/${deletePageId}`, { method: 'DELETE' });
+      await fetch(`/api/pages/${targetId}`, { method: 'DELETE' });
       onUpdate();
     } catch (err) {
       console.error('Failed to delete', err);
-    } finally {
-      setDeletePageId(null);
+      onUpdate(); // Re-sync if failed
     }
   };
 

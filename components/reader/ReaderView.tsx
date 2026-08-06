@@ -55,8 +55,11 @@ export default function ReaderView({ book, initialPage }: ReaderViewProps) {
         img.src = sortedPages[index].imageUrl;
       }
     };
-    preloadImage(currentPage);
-    preloadImage(currentPage - 2);
+    // Preload next page, 2nd next page, and previous page for instant zero-lag page flips
+    const currentIdx = currentPage - 1;
+    preloadImage(currentIdx + 1); // Next page
+    preloadImage(currentIdx + 2); // Page after next
+    preloadImage(currentIdx - 1); // Previous page
   }, [currentPage, sortedPages]);
 
   useEffect(() => {
